@@ -1,5 +1,8 @@
 import 'package:app_imc_flutter/models/imc_model.dart';
+import 'package:app_imc_flutter/models/imc_model_sqlite.dart';
+import 'package:app_imc_flutter/repositories/imc_sqlite_repository.dart';
 import 'package:app_imc_flutter/services/imc_calc_services.dart';
+import 'package:app_imc_flutter/services/sharedPreferencesData.dart';
 import 'package:flutter/material.dart';
 
 class MyHomePage extends StatefulWidget {
@@ -16,9 +19,25 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  ImcSqliteRepository imcSqliteRepository = ImcSqliteRepository();
   TextEditingController alturaController = TextEditingController();
   TextEditingController pesoController = TextEditingController();
   late String resultado = '';
+
+  @override
+  void initState() {
+    super.initState();
+    carregarDados();
+  }
+
+  Sharedpreferencesdata dataAltura = Sharedpreferencesdata();
+
+  void carregarDados() async {
+    double altura = await dataAltura.getShared() ?? 0;
+    if (altura != null) {
+      alturaController.text = altura.toString();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,11 +94,15 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void _calcularImc() {
-    double peso = double.parse(pesoController.text);
-    double altura = double.parse(alturaController.text);
+  void _calcularImc() async {
+    double peso = double.tryParse(pesoController.text) ?? 0;
+    double altura = double.tryParse(alturaController.text) ?? 0;
+    dataAltura.setShared(altura);
     String classificacaoImc = calcimc(peso: peso, altura: altura);
-    ImcModel imcModel = ImcModel(altura: altura, peso: peso, imc: classificacaoImc);
+    ImcModel imcModel =
+        ImcModel(altura: altura, peso: peso, imc: classificacaoImc);
+    await imcSqliteRepository
+        .salvar(ImcModelSqlite(altura, 0, classificacaoImc, peso));
     setState(() {
       resultado = classificacaoImc;
     });
